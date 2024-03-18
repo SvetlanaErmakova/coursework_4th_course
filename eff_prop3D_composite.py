@@ -1,8 +1,6 @@
-import time
-
 import cupy as cp
 import numpy as np
-
+import time
 
 def av4_xy(A):
     return 0.25 * (A[:-1, :-1, :] + A[:-1, 1:, :] + A[1:, :-1, :] + A[1:, 1:, :])
@@ -18,20 +16,34 @@ Lx = 1.0
 Ly = 1.0
 Lz = 1.0
 
-E0n = 10.0
-nu0n = 0.25
-alp0n = 1.3e-5
+# E0n = 10.0
+# nu0n = 0.25
+# alp0n = 1.3e-5
+E0n = 0.0
+nu0n = 0.0
+alp0n = 0.0
+
+E0p = 1.0
+nu0p = 0.4
+alp0p = 7.7e-5
+
+if E0p>E0n:
+    E00=E0p
+    nu00=nu0p
+else:
+    E00=E0n
+    nu00=nu0n
 
 rho = 1.0
-K0 = E0n / (3.0 * (1 - 2 * nu0n))
-G0 = E0n / (2.0 + 2.0 * nu0n)
+K0 = E00 / (3.0 * (1 - 2 * nu00))
+G0 = E00 / (2.0 + 2.0 * nu00)
 
 # NUMERICS
-Nx = 200
-Ny = 200
-Nz = 200
+Nx = 100
+Ny = 100
+Nz = 100
 
-Nt = 10000
+Nt = 1000
 CFL = 0.25
 
 # PREPROCESSING
@@ -44,15 +56,15 @@ z = cp.linspace(-Lz/2, Lz/2, Nz)
 x, y, z = cp.meshgrid(x, y, z)
 
 xUx, yUx, zUx = cp.meshgrid( cp.linspace(-(Lx + dX)/2, (Lx + dX)/2, Nx+1),
-                             cp.linspace(-Ly/2, Ly/2, Ny), 
+                             cp.linspace(-Ly/2, Ly/2, Ny),
                              cp.linspace(-Lz/2, Lz/2, Nz), indexing='ij')
 
-xUy, yUy, zUy = cp.meshgrid( cp.linspace(-Lx/2, Lx/2, Nx), 
-                             cp.linspace(-(Ly + dY)/2, (Ly + dY)/2, Ny+1), 
+xUy, yUy, zUy = cp.meshgrid( cp.linspace(-Lx/2, Lx/2, Nx),
+                             cp.linspace(-(Ly + dY)/2, (Ly + dY)/2, Ny+1),
                              cp.linspace(-Lz/2, Lz/2, Nz), indexing='ij')
 
-xUz, yUz, zUz = cp.meshgrid(cp.linspace(-Lx/2, Lx/2, Nx), 
-                             cp.linspace(-Ly/2, Ly/2, Ny), 
+xUz, yUz, zUz = cp.meshgrid(cp.linspace(-Lx/2, Lx/2, Nx),
+                             cp.linspace(-Ly/2, Ly/2, Ny),
                              cp.linspace(-(Lz + dZ)/2, (Lz + dZ)/2, Nz+1), indexing='ij')
 
 
@@ -60,9 +72,6 @@ dt = CFL * min(dX, min(dY, dZ)) / cp.sqrt((K0 + 4*G0/3) / rho)
 damp = 4 / dt / Nx
 
 # MATERIALS
-E0p = 1.0
-nu0p = 0.4
-alp0p = 7.7e-5
 
 E = E0p * cp.ones((Nx, Ny, Nz))
 nu = nu0p * cp.ones((Nx, Ny, Nz))
@@ -128,18 +137,18 @@ for it in range(Nt):
     tauyz = av4_yz(G) * (cp.diff(Uy[:,1:-1,:], axis=2) / dZ + cp.diff(Uz[:,:,1:-1], axis=1) / dY)
 
     # motion equation
-    dVxdt = (cp.diff(-P[:,1:-1,1:-1] + tauxx[:,1:-1,1:-1], axis=0) / dX + 
-             cp.diff(tauxy[:,:,1:-1], axis=1) / dY + 
+    dVxdt = (cp.diff(-P[:,1:-1,1:-1] + tauxx[:,1:-1,1:-1], axis=0) / dX +
+             cp.diff(tauxy[:,:,1:-1], axis=1) / dY +
              cp.diff(tauxz[:,1:-1,:], axis=2) / dZ) / rho
     Vx[1:-1,1:-1,1:-1] = Vx[1:-1,1:-1,1:-1] * (1 - dt * damp) + dVxdt * dt
 
-    dVydt = (cp.diff(tauxy[:,:,1:-1], axis=0) / dX + 
-             cp.diff(-P[1:-1,:,1:-1] + tauyy[1:-1,:,1:-1], axis=1) / dY + 
+    dVydt = (cp.diff(tauxy[:,:,1:-1], axis=0) / dX +
+             cp.diff(-P[1:-1,:,1:-1] + tauyy[1:-1,:,1:-1], axis=1) / dY +
              cp.diff(tauyz[1:-1,:,:], axis=2) / dZ) / rho
     Vy[1:-1,1:-1,1:-1] = Vy[1:-1,1:-1,1:-1] * (1 - dt * damp) + dVydt * dt
 
-    dVzdt = (cp.diff(tauxz[:,1:-1,:], axis=0) / dX + 
-             cp.diff(tauyz[1:-1,:,:], axis=1) / dY + 
+    dVzdt = (cp.diff(tauxz[:,1:-1,:], axis=0) / dX +
+             cp.diff(tauyz[1:-1,:,:], axis=1) / dY +
              cp.diff(-P[1:-1,1:-1,:] + tauzz[1:-1,1:-1,:], axis=2) / dZ) / rho
     Vz[1:-1,1:-1,1:-1] = Vz[1:-1,1:-1,1:-1] * (1 - dt * damp) + dVzdt * dt
 
@@ -210,18 +219,18 @@ for it in range(1, Nt+1):
     tauyz = av4_yz(G) * (cp.diff(Uy[:,1:-1,:], axis=2) / dZ + cp.diff(Uz[:,:,1:-1], axis=1) / dY)
 
     # motion equation
-    dVxdt = (cp.diff(-P[:,1:-1,1:-1] + tauxx[:,1:-1,1:-1], axis=0) / dX + 
-             cp.diff(tauxy[:,:,1:-1], axis=1) / dY + 
+    dVxdt = (cp.diff(-P[:,1:-1,1:-1] + tauxx[:,1:-1,1:-1], axis=0) / dX +
+             cp.diff(tauxy[:,:,1:-1], axis=1) / dY +
              cp.diff(tauxz[:,1:-1,:], axis=2) / dZ) / rho
     Vx[1:-1,1:-1,1:-1] = Vx[1:-1,1:-1,1:-1] * (1 - dt * damp) + dVxdt * dt
 
-    dVydt = (cp.diff(tauxy[:,:,1:-1], axis=0) / dX + 
-             cp.diff(-P[1:-1,:,1:-1] + tauyy[1:-1,:,1:-1], axis=1) / dY + 
+    dVydt = (cp.diff(tauxy[:,:,1:-1], axis=0) / dX +
+             cp.diff(-P[1:-1,:,1:-1] + tauyy[1:-1,:,1:-1], axis=1) / dY +
              cp.diff(tauyz[1:-1,:,:], axis=2) / dZ) / rho
     Vy[1:-1,1:-1,1:-1] = Vy[1:-1,1:-1,1:-1] * (1 - dt * damp) + dVydt * dt
 
-    dVzdt = (cp.diff(tauxz[:,1:-1,:], axis=0) / dX + 
-             cp.diff(tauyz[1:-1,:,:], axis=1) / dY + 
+    dVzdt = (cp.diff(tauxz[:,1:-1,:], axis=0) / dX +
+             cp.diff(tauyz[1:-1,:,:], axis=1) / dY +
              cp.diff(-P[1:-1,1:-1,:] + tauzz[1:-1,1:-1,:], axis=2) / dZ) / rho
     Vz[1:-1,1:-1,1:-1] = Vz[1:-1,1:-1,1:-1] * (1 - dt * damp) + dVzdt * dt
 
@@ -237,3 +246,4 @@ print(f'alpha={alpha}')
 end_numpy = time.time()
 time_numpy = end_numpy - start_numpy
 print(f"Время вычисление alpha с cupy: {time_numpy} секунд")
+
