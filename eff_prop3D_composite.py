@@ -1,7 +1,8 @@
+import time
+
 import cupy as cp
 import numpy as np
 
-import time
 
 def av4_xy(A):
     return 0.25 * (A[:-1, :-1, :] + A[:-1, 1:, :] + A[1:, :-1, :] + A[1:, 1:, :])
