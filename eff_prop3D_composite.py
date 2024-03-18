@@ -1,5 +1,6 @@
 import cupy as cp
 import numpy as np
+
 import time
 
 def av4_xy(A):
